@@ -24,7 +24,7 @@
 <div class="text-section">
     <h3>Some rules for playing:</h3>
     <ul>
-        <li>Add the <a href="https://chainlist.org/?testnets=true&search=mumbai" target="_blank" rel="noopener">Mumbai network</a> on Metamask</li>
+        <li>Add the <a href="https://polygon-mumbai-bor-rpc.publicnode.com/" target="_blank" rel="noopener">Mumbai network</a> on Metamask</li>
         <li>Get some <a href="https://faucets.chain.link/mumbai" target="_blank" rel="noopener">test Matic</a> on the Polygon Pos (Mumbai) network</li>
         <li>Create 4 wallets on Metamask by adding some <a href="https://faucets.chain.link/mumbai" target="_blank" rel="noopener">test Matic</a></li>
         <li>Make sure you are well connected to the Mumbai network</li>
@@ -181,13 +181,13 @@
 
         async function updateLastWinners(contract) {
             const latestLotteryId = await contract.methods.idLottery().call();
-            let winnersListHtml = "";
+            let winnersListHtml = '';
             for (let i = latestLotteryId - 1; i >= Math.max(0, latestLotteryId - 10); i--) {
                 const winnerAddress = await contract.methods.getWinner(i).call();
-                winnersListHtml = `<div>Lottery ${i + 1}: ${winnerAddress}</div>` + winnersListHtml;
+                winnersListHtml += `<div data-id="Lottery ${i + 1}:"><span>${winnerAddress}</span></div>`; // Ajout d'un span pour l'adresse
             }
             document.getElementById('winnersList').innerHTML = winnersListHtml;
-        }
+                    }
     </script>
 </body>
 </html>
