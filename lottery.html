@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Lottery</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@^1.3.0/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>SUPER LOTTERY</h1>
+    <br><br>
+    <link href="lottery.css" rel="stylesheet">
+    <div class="buttons-container">
+    <button id="enterLottery">Enter</button>
+    <button id="showPlayers">Players</button>
+    </div>
+    <p id="lotteryStatus">Lottery Status: Checking...</p>
+    <p id="winnerAddress">Winner's address: Loading...</p>
+    <p id="currentLotteryId">Current Lottery ID: Loading...</p>
+    <h2>Last 10 Winners</h2>
+    <div id="winnersList"></div>
+    <p id="countdown">Refreshing in: 10s</p> <!-- Initialement masqué -->
+    <h3>Welcome to this fictional lottery!</h3>
+<div class="text-section">
+    <h3>Some rules for playing:</h3>
+    <ul>
+        <li>Add the <a href="https://chainlist.org/?testnets=true&search=mumbai" target="_blank">Mumbai network</a> on Metamask</li>
+        <li>Get some <a href="https://faucets.chain.link/mumbai" target="_blank">test Matic</a> on the Polygon Pos (Mumbai) network</li>
+        <li>Create 4 wallets on Metamask by adding some <a href="https://faucets.chain.link/mumbai" target="_blank">test Matic</a></li>
+        <li>Make sure you are well connected to the Mumbai network</li>
+        <li>Entry costs 0.001 test Matic plus transaction fees.</li>
+        <li>Click on "Enter" and confirm on Metamask to enter the lottery</li>
+        <li>Wait a few seconds for your registration to be validated</li>
+        <li>Repeat the process with your three other wallets</li>
+        <li>On the 4th and last registration, wait 30 seconds for the winner to be announced; it will be updated at "Winner’s address"</li>
+        <li>Once the winner is announced, the page will refresh, and you can start the experience over if you wish</li>
+        <li>"Players" allows you to see the number of registered players</li>
+    </ul>
+    <p>Good luck!</p>
+</div>
+
+<div class="text-section">   
+    <h3>To read:</h3>
+    <p>This is a personal project that I carried out to improve my skills in Solidity, HTML, CSS, and Javascript. 
+    <br>The game's goal is simple; you need to enter the lottery 4 times using 4 different wallets.
+    <br>The draw is made completely randomly with the <a href="https://docs.chain.link/vrf" target="_blank">Chainlink VRF</a>; 
+    that's why the draw takes a little time. 
+    You can find all my work <a href="https://github.com/Azucrypto/Super-Lotery/tree/main" target="_blank">here</a>.</p>
+    <p>Yes, as you've understood, the same person can play 4 times with 4 different wallets and win the lottery.
+    <br> This allows anyone who wants to test it to do so. My goal was to create a lottery from A to Z by reusing all these codes. 
+    <br> I had to do it this way because the turnout would not be large enough to trigger the lottery draw (4 participants).</p>
+    <p>Feel free to give me your feedback by sending me a message <a href="https://soliditysphere.com/contact" target="_blank">here</a>.</p>
+</div> 
+
+    <script type="module">
+        import MyABIContract from './MyABIContract.js';
+
+        window.addEventListener('load', async () => {
+            if (window.ethereum) {
+                window.web3 = new Web3(ethereum);
+                try {
+                    await ethereum.request({ method: 'eth_requestAccounts' });
+                    startApp();
+                } catch (error) {
+                    console.error("User denied account access...");
+                }
+            } else if (window.web3) {
+                window.web3 = new Web3(web3.currentProvider);
+                startApp();
+            } else {
+                console.log('Non-Ethereum browser detected. Consider trying MetaMask!');
+            }
+        });
+
+        async function startApp() {
+            const contractABI = MyABIContract;
+            const contractAddress = '0xf92700e5edae2c2c16c7d79a72f3d1884bb71426';
+            const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+            await updateLotteryStatus(contract);
+            await updateLastWinners(contract);
+
+            contract.events.LotteryDrawingFinished()
+                .on('data', async (event) => {
+                    await updateWinnerAddress(contract);
+                    await updateLotteryStatus(contract);
+                    await updateLastWinners(contract);
+                    startCountdown(10);
+                })
+                .on('error', console.error);
+
+            document.getElementById('enterLottery').addEventListener('click', async () => await enterLottery(contract));
+            document.getElementById('showPlayers').addEventListener('click', async () => await showPlayers(contract));
+        }
+
+        function startCountdown(seconds) {
+            let counter = seconds;
+            const interval = setInterval(() => {
+                document.getElementById('countdown').innerText = `Refreshing in: ${counter}s`;
+                counter--;
+                if (counter < 0) {
+                    clearInterval(interval);
+                    window.location.reload(); // Rafraîchir la page
+                }
+            }, 1000);
+        }
+
+        async function enterLottery(contract) {
+            try {
+                const accounts = await web3.eth.getAccounts();
+                const isRegistered = await contract.methods.isPlayerRegistered(accounts[0]).call();
+                if (isRegistered) {
+                    alert("You are already registered for this lottery.");
+                    return;
+                }
+
+                await contract.methods.enter().send({
+                    from: accounts[0],
+                    value: web3.utils.toWei('0.001', 'ether')
+                });
+                alert('Entry into the lottery was successful!');
+
+                // Check if the maximum number of players has been reached, then wait for the winner
+                const numberOfPlayers = await contract.methods.getNumberOfPlayers().call();
+                if (numberOfPlayers == 4) {
+                    setTimeout(async () => {
+                        await updateWinnerAddress(contract);
+                    }, 30000); // Adjust the timeout as needed
+                }
+
+                await updateLotteryStatus(contract);
+            } catch (error) {
+                console.error("Error entering the lottery:", error.message);
+                alert("Error entering the lottery. Check the console for details.");
+            }
+        }
+
+
+        async function showPlayers(contract) {
+            try {
+                const numberOfPlayers = await contract.methods.getNumberOfPlayers().call();
+                alert(`There are currently ${numberOfPlayers} players registered.`);
+            } catch (error) {
+                console.error("Error retrieving the number of players:", error.message);
+                alert("Error retrieving the number of players. Check the console for details.");
+            }
+        }
+
+        async function updateWinnerAddress(contract) {
+            const latestLotteryId = await contract.methods.idLottery().call() - 1;
+            if (latestLotteryId >= 0) {
+                const winnerAddress = await contract.methods.getWinner(latestLotteryId).call();
+                document.getElementById('winnerAddress').innerText = `Winner's address: ${winnerAddress}`;
+
+                // Afficher le compte à rebours et rafraîchir la page après 10 secondes
+                document.getElementById('countdown').style.display = "block";
+                let counter = 10;
+                const countdownInterval = setInterval(() => {
+                    document.getElementById('countdown').innerText = `Refreshing in: ${counter}s`;
+                    counter--;
+                    if (counter < 0) {
+                        clearInterval(countdownInterval);
+                        window.location.reload();
+                    }
+                }, 1000);
+            } else {
+                document.getElementById('winnerAddress').innerText = "Winner's address: Not available";
+            }
+        }
+
+
+        async function updateLotteryStatus(contract) {
+            const isOpen = await contract.methods.lotteryOpen().call();
+            document.getElementById('lotteryStatus').innerText = `Lottery Status: ${isOpen ? 'Open' : 'Closed'}`;
+
+            // Ajout pour la mise à jour de l'ID de la loterie en cours
+            const currentLotteryId = await contract.methods.idLottery().call();
+            document.getElementById('currentLotteryId').innerText = `Current Lottery ID: ${parseInt(currentLotteryId) + 1}`;
+        }
+
+
+        async function updateLastWinners(contract) {
+            const latestLotteryId = await contract.methods.idLottery().call();
+            let winnersListHtml = "";
+            for (let i = latestLotteryId - 1; i >= Math.max(0, latestLotteryId - 10); i--) {
+                const winnerAddress = await contract.methods.getWinner(i).call();
+                winnersListHtml = `<div>Lottery ${i + 1}: ${winnerAddress}</div>` + winnersListHtml;
+            }
+            document.getElementById('winnersList').innerHTML = winnersListHtml;
+        }
+    </script>
+</body>
+</html>
