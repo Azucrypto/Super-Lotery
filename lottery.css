@@ -93,14 +93,40 @@ ul {
 }
 
 #winnersList {
-    background-color: #ffffff30;
-    border-radius: 15px;
-    padding: 25px;
+    background-color: #ffffff10;
+    border: 1px solid #ffffff40;
+    border-radius: 10px;
+    padding: 20px;
     margin-top: 30px;
     width: 100%;
     max-width: 800px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: table;
+    overflow: hidden;
+    border-collapse: separate;
+    border-spacing: 0 10px;
 }
+
+#winnersList div {
+    display: table-row;
+    background-color: #ffffff20;
+}
+
+#winnersList div:before {
+    content: attr(data-id);
+    display: table-cell;
+    padding-right: 15px;
+    color: #ffdd57;
+    font-weight: bold;
+}
+
+#winnersList div span {
+    display: table-cell;
+    padding: 1px 0;
+}
+
+
+
 
 .text-section {
     background-color: #ffffff30;
